@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Employee Dashboard - Walmart</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div class="container">
+    <div class="app-header">
+      <div class="walmart-logo-small">
+        <svg width="80" height="30" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 8h8v24H8z" fill="#0071dc"/>
+          <path d="M24 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M40 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M56 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M72 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M88 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M104 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M120 8h8v24h-8z" fill="#0071dc"/>
+        </svg>
+      </div>
+      <div class="top-bar">
+        <button id="logoutBtn" aria-label="Logout">Sign Out</button>
+      </div>
+    </div>
+    <h1>Employee Dashboard</h1>
+    <div class="section-badges" style="display:flex;gap:1em;margin-bottom:1em;">
+      <span class="status-badge" style="background:#666;">Pending</span>
+      <span class="status-badge" style="background:#0071ce;">In Progress</span>
+      <span class="status-badge" style="background:#22c55e;">Completed</span>
+    </div>
+    <div style="margin-bottom:1em;">
+      <label for="employeeName">Your Name/ID: </label>
+      <input type="text" id="employeeName" placeholder="Enter your name or ID" required />
+      <button onclick="loadReports()">Refresh</button>
+    </div>
+    <div id="pendingReports" class="report-list"></div>
+    <div id="inProgressReports" class="report-list"></div>
+    <div id="completedReports" class="report-list"></div>
+    <div id="result" style="margin-top:1em;"></div>
+    <a href="index.html" class="btn">Back to Home</a>
+  </div>
+  <script src="app.js"></script>
+  <script>
+    // Employee Dashboard using localStorage
+    function createReportCard(report, employeeName) {
+      const card = document.createElement('div');
+      card.className = 'report-card';
+      card.style.marginBottom = '2em';
+      let statusBadge = '';
+      if (report.rejected) statusBadge = '<span class="status-badge" style="background:#dc2626;">REJECTED</span>';
+      else if (report.solved && report.approved) statusBadge = '<span class="status-badge" style="background:#22c55e;">COMPLETED</span>';
+      else if (report.assignedTo === employeeName) statusBadge = '<span class="status-badge" style="background:#0071ce;">IN PROGRESS</span>';
+      else statusBadge = '<span class="status-badge" style="background:#666;">PENDING</span>';
+      card.innerHTML = `
+        <div class="report-header">${statusBadge}</div>
+        <strong>Status:</strong> <span>${(report.status || (report.assignedTo ? 'in_progress' : 'pending')).replace('_', ' ')}</span><br>
+        <strong>Location:</strong> Aisle ${report.aisleNumber} - ${report.section}<br>
+        <strong>Issue:</strong> ${report.issueType}<br>
+        <strong>Description:</strong> ${report.desc}<br>
+        <strong>Reward:</strong> ${report.redeem ? 'Redeem Discount' : 'Claim Points'}<br>
+        <strong>Assigned To:</strong> ${report.assignedTo ? report.assignedTo : '<em>Unassigned</em>'}<br>
+        <strong>Created:</strong> ${new Date(report.date).toLocaleString()}<br>
+        ${report.photo ? `<img src="${report.photo}" alt="Shelf Photo" style="margin:1em 0;max-width:100%;border-radius:4px;" />` : ''}
+      `;
+      // Action buttons
+      if ((!report.status || report.status === 'pending') && !report.assignedTo && !report.rejected) {
+        const assignBtn = document.createElement('button');
+        assignBtn.textContent = 'Accept (Assign to Me)';
+        assignBtn.className = 'btn btn-action';
+        assignBtn.onclick = function() {
+          assignBtn.disabled = true;
+          assignReport(report.id);
+          showToast('Report assigned!');
+        };
+        card.appendChild(assignBtn);
+      }
+      if ((report.status === 'in_progress' || report.assignedTo === employeeName) && report.assignedTo === employeeName && !report.solved && !report.rejected) {
+        const completeBtn = document.createElement('button');
+        completeBtn.textContent = 'Mark as Completed';
+        completeBtn.className = 'btn btn-action';
+        completeBtn.onclick = function() {
+          completeBtn.disabled = true;
+          completeReport(report.id);
+          showToast('Report marked as completed!');
+        };
+        card.appendChild(completeBtn);
+        const rejectBtn = document.createElement('button');
+        rejectBtn.textContent = 'Reject';
+        rejectBtn.className = 'btn btn-action';
+        rejectBtn.style.background = '#dc2626';
+        rejectBtn.onclick = function() {
+          rejectBtn.disabled = true;
+          rejectReport(report.id);
+          showToast('Report rejected!');
+        };
+        card.appendChild(rejectBtn);
+      }
+      if ((!report.status || report.status === 'pending') && !report.assignedTo && !report.rejected) {
+        const rejectBtn = document.createElement('button');
+        rejectBtn.textContent = 'Reject';
+        rejectBtn.className = 'btn btn-action';
+        rejectBtn.style.background = '#dc2626';
+        rejectBtn.onclick = function() {
+          rejectBtn.disabled = true;
+          rejectReport(report.id);
+          showToast('Report rejected!');
+        };
+        card.appendChild(rejectBtn);
+      }
+      if (report.rejected) {
+        const rejectedMsg = document.createElement('div');
+        rejectedMsg.style.color = '#dc2626';
+        rejectedMsg.style.fontWeight = 'bold';
+        rejectedMsg.textContent = 'This report was rejected.';
+        card.appendChild(rejectedMsg);
+      }
+      return card;
+    }
+
+    function loadReports() {
+      const employeeName = document.getElementById('employeeName').value.trim();
+      const pendingDiv = document.getElementById('pendingReports');
+      const inProgressDiv = document.getElementById('inProgressReports');
+      const completedDiv = document.getElementById('completedReports');
+      pendingDiv.innerHTML = '<h2>Pending Reports</h2>';
+      inProgressDiv.innerHTML = '<h2>In Progress</h2>';
+      completedDiv.innerHTML = '<h2>Completed</h2>';
+      let reports = (window.getReports ? window.getReports() : []);
+      if (!reports || reports.length === 0) {
+        pendingDiv.innerHTML += '<em>No reports found.</em>';
+        inProgressDiv.innerHTML = '';
+        completedDiv.innerHTML = '';
+        return;
+      }
+      // Completed: solved & not rejected, most recent first
+      const completedReports = reports.filter(r => r.solved && !r.rejected).sort((a, b) => new Date(b.completedAt || b.date) - new Date(a.completedAt || a.date));
+      completedReports.forEach(report => completedDiv.appendChild(createReportCard(report, employeeName)));
+      // Pending: not assigned, not solved, not rejected
+      reports.filter(r => !r.solved && !r.assignedTo && !r.rejected).forEach(report => pendingDiv.appendChild(createReportCard(report, employeeName)));
+      // In Progress: assigned to this employee, not solved, not rejected
+      reports.filter(r => !r.solved && r.assignedTo === employeeName && !r.rejected).forEach(report => inProgressDiv.appendChild(createReportCard(report, employeeName)));
+    }
+
+    function assignReport(id) {
+      const employee = document.getElementById('employeeName').value.trim();
+      if (!employee) {
+        alert('Please enter your name or ID first.');
+        return;
+      }
+      const reports = window.getReports ? window.getReports() : [];
+      const idx = reports.findIndex(r => r.id === id);
+      if (idx !== -1) {
+        reports[idx].assignedTo = employee;
+        reports[idx].status = 'in_progress';
+        window.setReports && window.setReports(reports);
+        document.getElementById('result').textContent = 'Report assigned!';
+        loadReports();
+      }
+    }
+
+    function completeReport(id) {
+      const reports = window.getReports ? window.getReports() : [];
+      const idx = reports.findIndex(r => r.id === id);
+      if (idx !== -1) {
+        reports[idx].solved = true;
+        reports[idx].status = 'completed';
+        reports[idx].approved = true;
+        reports[idx].completedAt = new Date().toISOString();
+        window.setReports && window.setReports(reports);
+        document.getElementById('result').textContent = 'Report marked as completed!';
+        loadReports();
+      }
+    }
+
+    function rejectReport(id) {
+      const reports = window.getReports ? window.getReports() : [];
+      const idx = reports.findIndex(r => r.id === id);
+      if (idx !== -1) {
+        reports[idx].rejected = true;
+        reports[idx].status = 'rejected';
+        window.setReports && window.setReports(reports);
+        document.getElementById('result').textContent = 'Report rejected!';
+        loadReports();
+      }
+    }
+
+    function showToast(msg) {
+      let toast = document.getElementById('toastMsg');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toastMsg';
+        toast.style.position = 'fixed';
+        toast.style.bottom = '2em';
+        toast.style.left = '50%';
+        toast.style.transform = 'translateX(-50%)';
+        toast.style.background = '#0071ce';
+        toast.style.color = '#fff';
+        toast.style.padding = '1em 2em';
+        toast.style.borderRadius = '8px';
+        toast.style.zIndex = '9999';
+        toast.style.fontWeight = 'bold';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 2000);
+    }
+
+    // Initial load and auto-refresh every 5 seconds
+    loadReports();
+    setInterval(loadReports, 5000);
+
+    // Remember last entered employee name
+    const employeeNameInput = document.getElementById('employeeName');
+    if (employeeNameInput) {
+      employeeNameInput.value = localStorage.getItem('lastEmployeeName') || '';
+      employeeNameInput.addEventListener('input', function() {
+        localStorage.setItem('lastEmployeeName', employeeNameInput.value);
+      });
+    }
+  </script>
+</body>
+</html> 

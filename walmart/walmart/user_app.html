@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Report Aisle Issue - Walmart</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div class="container">
+    <div class="app-header">
+      <div class="walmart-logo-small">
+        <svg width="80" height="30" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 8h8v24H8z" fill="#0071dc"/>
+          <path d="M24 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M40 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M56 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M72 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M88 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M104 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M120 8h8v24h-8z" fill="#0071dc"/>
+        </svg>
+      </div>
+      <div class="top-bar">
+        <button id="myReportsBtn" aria-label="View My Reports">My Reports</button>
+        <button id="logoutBtn" aria-label="Logout">Sign Out</button>
+      </div>
+    </div>
+    <div style="text-align:center; margin: 1em 0;">
+      <div class="strong-warning" style="font-weight: bold; margin-bottom: 0.5em;">⚠️ Please use your camera to take a real photo of the shelf. Do not upload unrelated images.</div>
+      <!-- Removed the 'Report a Shelf (Photo Upload)' link -->
+    </div>
+    <h1>Report Aisle Issue</h1>
+    <p class="form-subtitle">Help us keep our stores organized by reporting unstocked or messy aisles</p>
+    <form id="reportForm" aria-label="Aisle Report Form">
+      <div class="form-section">
+        <h3>Location Details</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="aisleNumber">Aisle Number</label>
+            <input type="text" id="aisleNumber" placeholder="e.g., A12, B5" required />
+          </div>
+          <div class="form-group">
+            <label for="section">Section/Area</label>
+            <select id="section" required>
+              <option value="">Select section</option>
+              <option value="grocery">Grocery</option>
+              <option value="dairy">Dairy</option>
+              <option value="frozen">Frozen Foods</option>
+              <option value="produce">Produce</option>
+              <option value="meat">Meat & Seafood</option>
+              <option value="bakery">Bakery</option>
+              <option value="household">Household</option>
+              <option value="electronics">Electronics</option>
+              <option value="clothing">Clothing</option>
+              <option value="pharmacy">Pharmacy</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>Issue Details</h3>
+        <div class="form-group">
+          <label for="issueType">Issue Type</label>
+          <select id="issueType" required>
+            <option value="">Select issue type</option>
+            <option value="empty-shelf">Empty Shelf</option>
+            <option value="low-stock">Low Stock</option>
+            <option value="messy-display">Messy Display</option>
+            <option value="wrong-price">Wrong Price</option>
+            <option value="expired-items">Expired Items</option>
+            <option value="broken-package">Broken Package</option>
+            <option value="spilled-product">Spilled Product</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="severity">Severity Level</label>
+          <select id="severity" required>
+            <option value="">Select severity</option>
+            <option value="low">Low - Minor issue</option>
+            <option value="medium">Medium - Needs attention</option>
+            <option value="high">High - Urgent fix needed</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="productName">Product Name (if known)</label>
+          <input type="text" id="productName" placeholder="e.g., Kellogg's Corn Flakes" />
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>Photo & Description</h3>
+        <label for="photo">Upload Photo</label>
+        <input type="file" id="photo" accept="image/*" required aria-required="true" />
+        <div id="imgPreview" class="img-preview bordered" aria-live="polite"></div>
+        <button type="button" id="removePhotoBtn" class="btn" style="display:none;margin-bottom:1em;">Remove Photo</button>
+        <label for="desc">Detailed Description</label>
+        <textarea id="desc" placeholder="Please describe the issue in detail. Include specific location on the shelf, product names, and any other relevant information..." required aria-required="true"></textarea>
+      </div>
+
+      <div class="form-section">
+        <h3>Rewards</h3>
+        <div class="checkbox-row">
+          <input type="checkbox" id="redeem" />
+          <label for="redeem">Redeem discount points (earn 50 points instead of 20)</label>
+        </div>
+      </div>
+
+      <button type="submit">Submit Report</button>
+    </form>
+    <div id="confirmation" class="hidden" aria-live="polite"></div>
+    <div id="popup" class="popup hidden" role="dialog" aria-modal="true" aria-labelledby="popupTitle"></div>
+  </div>
+  <script src="app.js"></script>
+  <!-- Removed inline script to avoid duplicate variable declarations -->
+</body>
+</html> 

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Reports - Walmart</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div class="container">
+    <div class="app-header">
+      <div class="walmart-logo-small">
+        <svg width="80" height="30" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 8h8v24H8z" fill="#0071dc"/>
+          <path d="M24 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M40 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M56 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M72 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M88 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M104 8h8v24h-8z" fill="#0071dc"/>
+          <path d="M120 8h8v24h-8z" fill="#0071dc"/>
+        </svg>
+      </div>
+      <div class="top-bar">
+        <button id="backBtn" type="button" aria-label="Back to Report">← Back</button>
+        <button id="logoutBtn" type="button" aria-label="Logout">Sign Out</button>
+      </div>
+    </div>
+    <h1>My Reports</h1>
+    <button id="backToReportBtn" class="btn" style="margin-bottom:1em;">Back to Report</button>
+    <p class="form-subtitle">Track your submitted aisle reports and earned points</p>
+    <div id="myReportsList"></div>
+  </div>
+  <script>
+    function getReports() {
+      return JSON.parse(localStorage.getItem('aisleReports') || '[]');
+    }
+    function getUser() {
+      return localStorage.getItem('user');
+    }
+    const backBtn = document.getElementById('backBtn');
+    if (backBtn) {
+      backBtn.addEventListener('click', function() {
+        window.location.href = 'user_app.html';
+      });
+    }
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function() {
+        localStorage.removeItem('user');
+        window.location.href = 'index.html';
+      });
+    }
+    const myReportsList = document.getElementById('myReportsList');
+    function renderMyReports() {
+      const user = getUser();
+      if (!user) {
+        window.location.href = 'user_login.html';
+        return;
+      }
+      const reports = getReports().filter(r => r.user === user);
+      if (reports.length === 0) {
+        myReportsList.innerHTML = '<div class="no-reports">You have not submitted any reports yet.</div>';
+        return;
+      }
+      reports.sort((a, b) => new Date(b.date) - new Date(a.date));
+      myReportsList.innerHTML = '';
+      reports.forEach(report => {
+        const card = document.createElement('div');
+        card.className = 'report-card';
+        card.tabIndex = 0;
+        card.setAttribute('aria-label', `Report on ${new Date(report.date).toLocaleString()}`);
+        const severityClass = report.severity === 'high' ? 'severity-high' : 
+                             report.severity === 'medium' ? 'severity-medium' : 'severity-low';
+        let statusMsg = '';
+        let statusIcon = '';
+        let redeemDisplay = report.redeem ? 'Yes' : 'No';
+        if (report.rejected) {
+          statusIcon = '<span style="font-size:2em;color:#dc2626;">&#10060;</span>'; // Red cross
+          statusMsg = '<div style="color:#dc2626;font-weight:bold;">Your report was declined by an employee.</div>';
+          redeemDisplay = 'No';
+        } else if (report.solved) {
+          statusIcon = '<span style="font-size:2em;color:#22c55e;">&#10004;</span>'; // Green check
+          statusMsg = `<div style=\"color:#22c55e;font-weight:bold;\">You redeemed ${report.redeem ? 'a discount' : report.points + ' points'}!</div>`;
+          redeemDisplay = 'Yes';
+        } else if (report.assignedTo) {
+          statusIcon = '<span style="font-size:2em;color:#0071ce;">&#9203;</span>'; // Clock for in progress
+          statusMsg = '<div style="color:#0071ce;font-weight:bold;">Your report is being processed by an employee.</div>';
+        } else {
+          statusIcon = '<span style="font-size:2em;color:#666;">&#9203;</span>';
+          statusMsg = '<div style="color:#666;font-weight:bold;">Awaiting employee action.</div>';
+        }
+        card.innerHTML = `
+          <div class="report-header">
+            <span class="severity-badge ${severityClass}">${report.severity ? report.severity.toUpperCase() : 'UNKNOWN'}</span>
+            <span class="issue-type-badge">${report.issueType ? report.issueType.replace('-', ' ').toUpperCase() : 'ISSUE'}</span>
+          </div>
+          <img src="${report.photo}" alt="Report Photo" />
+          <div class="location-info">
+            <strong>Aisle ${report.aisleNumber || 'Unknown'}</strong> • ${report.section || 'Unknown Section'}
+            ${report.productName ? `<br><em>Product: ${report.productName}</em>` : ''}
+          </div>
+          <div class="desc">${report.desc}</div>
+          <div class="meta">Date: ${new Date(report.date).toLocaleString()}</div>
+          <div class="meta">Points: ${report.points}${report.bonusPoints ? ` (${report.basePoints} + ${report.bonusPoints} bonus)` : ''} | Redeem: ${redeemDisplay}</div>
+          <div style="margin:1em 0;">${statusIcon}</div>
+          ${statusMsg}
+        `

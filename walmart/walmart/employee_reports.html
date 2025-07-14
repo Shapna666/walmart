@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Employee Shelf Reports - Walmart</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .report-list { max-width: 800px; margin: 2em auto; }
+    .report-card { border: 1px solid #ccc; border-radius: 8px; padding: 1em; margin-bottom: 1em; background: #f9f9f9; }
+    .report-card img { max-width: 200px; max-height: 120px; display: block; margin-bottom: 0.5em; }
+    .status-pending { color: #b00; font-weight: bold; }
+    .status-in_progress { color: #e67e22; font-weight: bold; }
+    .status-completed { color: #27ae60; font-weight: bold; }
+    .btn-action { margin-right: 0.5em; }
+  </style>
+</head>
+<body>
+  <div class="container center">
+    <h1>Employee Shelf Reports</h1>
+    <div style="margin-bottom:1em;">
+      <label for="employeeName">Your Name/ID: </label>
+      <input type="text" id="employeeName" placeholder="Enter your name or ID" required />
+      <button onclick="loadReports()">Refresh</button>
+    </div>
+    <div id="reportList" class="report-list"></div>
+    <div id="result" style="margin-top:1em;"></div>
+    <a href="index.html" class="btn">Back to Home</a>
+  </div>
+  <script>
+    async function loadReports() {
+      const list = document.getElementById('reportList');
+      list.innerHTML = 'Loading...';
+      const res = await fetch('/api/reports');
+      const data = await res.json();
+      if (!data.success) {
+        list.innerHTML = 'Failed to load reports.';
+        return;
+      }
+      if (data.reports.length === 0) {
+        list.innerHTML = '<em>No reports found.</em>';
+        return;
+      }
+      list.innerHTML = '';
+      data.reports.forEach(report => {
+        const card = document.createElement('div');
+        card.className = 'report-card';
+        card.innerHTML = `
+          <strong>Status:</strong> <span class="status-${report.status}">${report.status.replace('_', ' ')}</span><br>
+          <strong>Location:</strong> ${report.location}<br>
+          <strong>Shelf Status:</strong> ${report.shelfStatus}<br>
+          <strong>Assigned To:</strong> ${report.assignedTo ? report.assignedTo : '<em>Unassigned</em>'}<br>
+          <strong>Created:</strong> ${new Date(report.createdAt).toLocaleString()}<br>
+          ${report.completedAt ? `<strong>Completed:</strong> ${new Date(report.completedAt).toLocaleString()}<br>` : ''}
+          ${report.image ? `<img src="${report.image}" alt="Shelf Photo" />` : ''}
+        `;
+        // Action buttons
+        if (report.status === 'pending') {
+          const assignBtn = document.createElement('button');
+          assignBtn.textContent = 'Accept (Assign to Me)';
+          assignBtn.className = 'btn btn-action';
+          assignBtn.onclick = () => assignReport(report.id);
+          card.appendChild(assignBtn);
+        }
+        if (report.status === 'in_progress' && report.assignedTo === document.getElementById('employeeName').value) {
+          const completeBtn = document.createElement('button');
+          completeBtn.textContent = 'Mark as Completed';
+          completeBtn.className = 'btn btn-action';
+          completeBtn.onclick = () => completeReport(report.id);
+          card.appendChild(completeBtn);
+        }
+        list.appendChild(card);
+      });
+    }
+
+    async function assignReport(id) {
+      const employee = document.getElementById('employeeName').value.trim();
+      if (!employee) {
+        alert('Please enter your name or ID first.');
+        return;
+      }
+      const res = await fetch(`/api/reports/${id}/assign`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employee })
+      });
+      const data = await res.json();
+      document.getElementById('result').textContent = data.success ? 'Report assigned!' : (data.error || 'Failed to assign report.');
+      loadReports();
+    }
+
+    async function completeReport(id) {
+      const res = await fetch(`/api/reports/${id}/complete`, {
+        method: 'PATCH'
+      });
+      const data = await res.json();
+      document.getElementById('result').textContent = data.success ? 'Report marked as completed!' : (data.error || 'Failed to complete report.');
+      loadReports();
+    }
+
+    // Initial load
+    loadReports();
+  </script>
+</body>
+</html> 
